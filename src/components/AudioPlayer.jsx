@@ -15,6 +15,7 @@ import {
   ListMusic,
   X
 } from 'lucide-react';
+import { getApiUrl } from '../api.js';
 
 export default function AudioPlayer({ 
   currentTrack, 
@@ -62,7 +63,7 @@ export default function AudioPlayer({
   useEffect(() => {
     if (currentTrack && audioRef.current) {
       setIsLoadingAudio(true);
-      const streamUrl = `/api/stream?id=${encodeURIComponent(currentTrack.id || currentTrack.url)}`;
+      const streamUrl = getApiUrl(`/api/stream?id=${encodeURIComponent(currentTrack.id || currentTrack.url)}`);
       audioRef.current.src = streamUrl;
       audioRef.current.volume = isMuted ? 0 : volume;
       audioRef.current.load();

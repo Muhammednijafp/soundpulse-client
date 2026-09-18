@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Download, CheckCircle2, Loader2, Music, Sparkles, X, FolderDown } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { getApiUrl } from '../api.js';
 
 export default function DownloadProgressModal({ 
   downloadingTrack, 
@@ -26,7 +27,7 @@ export default function DownloadProgressModal({
       setStep(3);
       
       // Trigger native browser download directly to device's downloads folder
-      const downloadUrl = `/api/download?id=${encodeURIComponent(downloadingTrack.id || downloadingTrack.url)}&bitrate=${bitrate || '320k'}`;
+      const downloadUrl = getApiUrl(`/api/download?id=${encodeURIComponent(downloadingTrack.id || downloadingTrack.url)}&bitrate=${bitrate || '320k'}`);
       
       const link = document.createElement('a');
       link.href = downloadUrl;
