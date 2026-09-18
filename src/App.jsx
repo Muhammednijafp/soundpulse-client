@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from './api.js';
 import Navbar from './components/Navbar.jsx';
 import SearchSection from './components/SearchSection.jsx';
 import MoodRadioSection from './components/MoodRadioSection.jsx';

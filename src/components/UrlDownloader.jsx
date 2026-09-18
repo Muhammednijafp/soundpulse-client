@@ -12,7 +12,7 @@ import {
   Music,
   AlertCircle
 } from 'lucide-react';
-import axios from 'axios';
+import axios from '../api.js';
 
 export default function UrlDownloader({ onPlayTrack, onStartDownload }) {
   const [urlInput, setUrlInput] = useState('');

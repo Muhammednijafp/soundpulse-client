@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-// Get Base API URL from environment variable (e.g. on Vercel: https://soundpulse-api.onrender.com)
-// If empty (local development or custom reverse proxy), defaults to '' (relative URLs)
-const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
+// Get Base API URL from environment variable or fallback to live production Render backend
+const envUrl = import.meta.env.VITE_API_BASE_URL;
+const rawBaseUrl = (envUrl && envUrl.trim() !== '') ? envUrl : 'https://soundpulse-fq3b.onrender.com';
 export const API_BASE_URL = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
 
 // Configure global Axios instance

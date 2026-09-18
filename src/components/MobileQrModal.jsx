@@ -12,7 +12,7 @@ import {
   Share2,
   CheckCircle2
 } from 'lucide-react';
-import axios from 'axios';
+import axios from '../api.js';
 
 export default function MobileQrModal({ isOpen, onClose }) {
   const [networkData, setNetworkData] = useState(null);

@@ -17,7 +17,7 @@ import {
   ChevronRight,
   Loader2
 } from 'lucide-react';
-import axios from 'axios';
+import axios from '../api.js';
 import SongCard from './SongCard.jsx';
 
 const ICON_MAP = {

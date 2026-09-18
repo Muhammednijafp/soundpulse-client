@@ -14,7 +14,7 @@ import {
   Play,
   RotateCcw
 } from 'lucide-react';
-import axios from 'axios';
+import axios from '../api.js';
 
 export default function LyricsModal({
   track,
