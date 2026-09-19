@@ -1,8 +1,33 @@
 import axios from 'axios';
 
-// Get Base API URL from environment variable or fallback to live production Render backend
-const envUrl = import.meta.env.VITE_API_BASE_URL;
-const rawBaseUrl = (envUrl && envUrl.trim() !== '') ? envUrl : 'https://soundpulse-fq3b.onrender.com';
+// Auto-detect environment:
+// 1. Explicit VITE_API_BASE_URL (if provided and non-empty)
+// 2. Localhost / Local IP (192.168.x.x) -> use local Django backend (http://<hostname>:8000)
+// 3. Vercel / Cloud Hosting -> fallback to live Render backend (https://soundpulse-fq3b.onrender.com)
+function resolveApiBaseUrl() {
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  if (envUrl && envUrl.trim() !== '') {
+    return envUrl.trim();
+  }
+
+  if (typeof window !== 'undefined' && window.location) {
+    const hostname = window.location.hostname;
+    const isLocal = hostname === 'localhost' || 
+                    hostname === '127.0.0.1' || 
+                    hostname.startsWith('192.168.') || 
+                    hostname.startsWith('10.') || 
+                    hostname.endsWith('.local');
+
+    if (isLocal) {
+      // In local dev/network mode, connect directly to local Django backend at port 8000
+      return `http://${hostname}:8000`;
+    }
+  }
+
+  return 'https://soundpulse-fq3b.onrender.com';
+}
+
+const rawBaseUrl = resolveApiBaseUrl();
 export const API_BASE_URL = rawBaseUrl.endsWith('/') ? rawBaseUrl.slice(0, -1) : rawBaseUrl;
 
 // Configure global Axios instance
