@@ -164,6 +164,8 @@ export default function AudioPlayer({
       {/* Native audio element */}
       <audio
         ref={audioRef}
+        crossOrigin="anonymous"
+        preload="metadata"
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={() => {
           if (audioRef.current && audioRef.current.duration) {

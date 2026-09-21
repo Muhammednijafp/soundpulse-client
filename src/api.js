@@ -5,9 +5,14 @@ import axios from 'axios';
 // 2. Localhost / Local IP (192.168.x.x) -> use local Django backend (http://<hostname>:8000)
 // 3. Vercel / Cloud Hosting -> fallback to live Render backend (https://soundpulse-fq3b.onrender.com)
 function resolveApiBaseUrl() {
-  const envUrl = import.meta.env.VITE_API_BASE_URL;
-  if (envUrl && envUrl.trim() !== '') {
-    return envUrl.trim();
+  let envUrl = import.meta.env.VITE_API_BASE_URL;
+  
+  // Clean quotes or extra spaces if present in env variable
+  if (envUrl) {
+    envUrl = envUrl.replace(/['"]+/g, '').trim();
+    if (envUrl !== '') {
+      return envUrl;
+    }
   }
 
   if (typeof window !== 'undefined' && window.location) {
@@ -47,4 +52,3 @@ export function getApiUrl(path) {
 }
 
 export default axios;
-
