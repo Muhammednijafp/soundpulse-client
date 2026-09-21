@@ -1,20 +1,10 @@
 import axios from 'axios';
 
 // Auto-detect environment:
-// 1. Explicit VITE_API_BASE_URL (if provided and non-empty)
-// 2. Localhost / Local IP (192.168.x.x) -> use local Django backend (http://<hostname>:8000)
+// 1. Localhost / Local IP (127.0.0.1, 192.168.x.x) -> ALWAYS use local Django backend (http://<hostname>:8000)
+// 2. Explicit VITE_API_BASE_URL (for custom cloud backend)
 // 3. Vercel / Cloud Hosting -> fallback to live Render backend (https://soundpulse-fq3b.onrender.com)
 function resolveApiBaseUrl() {
-  let envUrl = import.meta.env.VITE_API_BASE_URL;
-  
-  // Clean quotes or extra spaces if present in env variable
-  if (envUrl) {
-    envUrl = envUrl.replace(/['"]+/g, '').trim();
-    if (envUrl !== '') {
-      return envUrl;
-    }
-  }
-
   if (typeof window !== 'undefined' && window.location) {
     const hostname = window.location.hostname;
     const isLocal = hostname === 'localhost' || 
@@ -26,6 +16,14 @@ function resolveApiBaseUrl() {
     if (isLocal) {
       // In local dev/network mode, connect directly to local Django backend at port 8000
       return `http://${hostname}:8000`;
+    }
+  }
+
+  let envUrl = import.meta.env.VITE_API_BASE_URL;
+  if (envUrl) {
+    envUrl = envUrl.replace(/['"]+/g, '').trim();
+    if (envUrl !== '') {
+      return envUrl;
     }
   }
 
