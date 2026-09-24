@@ -36,6 +36,9 @@ export default function AudioPlayer({
   onNeedMoreTracks
 }) {
   const audioRef = useRef(null);
+  const ytPlayerRef = useRef(null);
+  const isYtReadyRef = useRef(false);
+  const timerIntervalRef = useRef(null);
 
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -43,86 +46,188 @@ export default function AudioPlayer({
   const [isMuted, setIsMuted] = useState(false);
   const [isLooping, setIsLooping] = useState(false);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const [useYtEngine, setUseYtEngine] = useState(true);
 
   const hasRequestedMoreRef = useRef(false);
+
+  // Initialize YouTube Iframe API once
+  useEffect(() => {
+    if (!window.YT) {
+      const tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      const firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag?.parentNode?.insertBefore(tag, firstScriptTag);
+    }
+
+    const initYt = () => {
+      if (window.YT && window.YT.Player && !ytPlayerRef.current) {
+        try {
+          ytPlayerRef.current = new window.YT.Player('soundpulse-yt-player', {
+            height: '1',
+            width: '1',
+            playerVars: {
+              autoplay: 1,
+              controls: 0,
+              disablekb: 1,
+              fs: 0,
+              modestbranding: 1,
+              playsinline: 1,
+              rel: 0,
+              origin: window.location.origin,
+            },
+            events: {
+              onReady: () => {
+                isYtReadyRef.current = true;
+                if (ytPlayerRef.current?.setVolume) {
+                  ytPlayerRef.current.setVolume(isMuted ? 0 : volume * 100);
+                }
+              },
+              onStateChange: (event) => {
+                // 1 = PLAYING, 2 = PAUSED, 0 = ENDED, 3 = BUFFERING
+                if (event.data === 1) {
+                  setIsPlaying(true);
+                  setIsLoadingAudio(false);
+                  if (ytPlayerRef.current?.getDuration) {
+                    const d = ytPlayerRef.current.getDuration();
+                    if (d && !isNaN(d)) setDuration(d);
+                  }
+                } else if (event.data === 2) {
+                  setIsPlaying(false);
+                } else if (event.data === 0) {
+                  handleTrackEnded();
+                } else if (event.data === 3) {
+                  setIsLoadingAudio(true);
+                }
+              },
+              onError: () => {
+                setIsLoadingAudio(false);
+              }
+            }
+          });
+        } catch (err) {
+          console.warn('YT Player init notice:', err);
+        }
+      }
+    };
+
+    if (window.YT && window.YT.Player) {
+      initYt();
+    } else {
+      window.onYouTubeIframeAPIReady = initYt;
+    }
+
+    return () => {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    };
+  }, []);
+
+  // Time tracker loop for YouTube Engine
+  useEffect(() => {
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+
+    if (isPlaying) {
+      timerIntervalRef.current = setInterval(() => {
+        if (ytPlayerRef.current && isYtReadyRef.current && ytPlayerRef.current.getCurrentTime) {
+          try {
+            const t = ytPlayerRef.current.getCurrentTime() || 0;
+            const d = ytPlayerRef.current.getDuration() || currentTrack?.duration || 0;
+
+            setCurrentTime(t);
+            if (onTimeUpdate) onTimeUpdate(t);
+            if (d && !isNaN(d)) setDuration(d);
+
+            if (d > 0 && d - t <= 15 && isAutoplay && !hasRequestedMoreRef.current) {
+              hasRequestedMoreRef.current = true;
+              if (onNeedMoreTracks) onNeedMoreTracks();
+            }
+          } catch (e) {}
+        }
+      }, 300);
+    }
+
+    return () => {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    };
+  }, [isPlaying, isAutoplay, currentTrack]);
 
   // Reset flags when current track changes
   useEffect(() => {
     hasRequestedMoreRef.current = false;
   }, [currentTrack?.id]);
 
-  // Sync seekTarget from external components (e.g., Karaoke lyrics click)
+  // Sync seekTarget from external components (e.g. Karaoke lyrics click)
   useEffect(() => {
-    if (seekTarget && typeof seekTarget.time === 'number' && audioRef.current) {
-      audioRef.current.currentTime = seekTarget.time;
-      setCurrentTime(seekTarget.time);
+    if (seekTarget && typeof seekTarget.time === 'number') {
+      const targetTime = seekTarget.time;
+      setCurrentTime(targetTime);
+      if (ytPlayerRef.current && isYtReadyRef.current && ytPlayerRef.current.seekTo) {
+        ytPlayerRef.current.seekTo(targetTime, true);
+      }
+      if (audioRef.current) {
+        audioRef.current.currentTime = targetTime;
+      }
     }
   }, [seekTarget]);
 
-  // When track changes, load new audio source
+  // When track changes, load and play
   useEffect(() => {
-    if (currentTrack && audioRef.current) {
-      setIsLoadingAudio(true);
-      const streamUrl = getApiUrl(`/api/stream?id=${encodeURIComponent(currentTrack.id || currentTrack.url)}`);
-      audioRef.current.src = streamUrl;
-      audioRef.current.volume = isMuted ? 0 : volume;
-      audioRef.current.load();
-      audioRef.current.play()
-        .then(() => {
-          setIsPlaying(true);
-          setIsLoadingAudio(false);
-        })
-        .catch((err) => {
-          console.warn('Audio playback start warning:', err);
-          setIsLoadingAudio(false);
+    if (!currentTrack) return;
+    setIsLoadingAudio(true);
+    setCurrentTime(0);
+
+    const cleanId = currentTrack.id ? currentTrack.id.split('v=')[-1].split('/')[-1] : '';
+
+    if (cleanId && ytPlayerRef.current && isYtReadyRef.current && ytPlayerRef.current.loadVideoById) {
+      try {
+        ytPlayerRef.current.loadVideoById({
+          videoId: cleanId,
+          startSeconds: 0
         });
+        ytPlayerRef.current.setVolume(isMuted ? 0 : volume * 100);
+        setIsPlaying(true);
+      } catch (e) {
+        console.warn('YT load error:', e);
+      }
+    } else if (cleanId) {
+      // If player not ready yet, retry in 300ms
+      const retryTimer = setTimeout(() => {
+        if (ytPlayerRef.current && ytPlayerRef.current.loadVideoById) {
+          ytPlayerRef.current.loadVideoById({ videoId: cleanId, startSeconds: 0 });
+          ytPlayerRef.current.setVolume(isMuted ? 0 : volume * 100);
+          setIsPlaying(true);
+        }
+      }, 400);
+      return () => clearTimeout(retryTimer);
     }
   }, [currentTrack]);
 
   // Sync play/pause state
   useEffect(() => {
-    if (!audioRef.current || !audioRef.current.src) return;
-    if (isPlaying) {
-      audioRef.current.play().catch(() => {});
-    } else {
-      audioRef.current.pause();
+    if (ytPlayerRef.current && isYtReadyRef.current) {
+      try {
+        if (isPlaying) {
+          ytPlayerRef.current.playVideo?.();
+        } else {
+          ytPlayerRef.current.pauseVideo?.();
+        }
+      } catch (e) {}
     }
   }, [isPlaying]);
 
   // Volume update
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : volume;
+    if (ytPlayerRef.current && isYtReadyRef.current && ytPlayerRef.current.setVolume) {
+      try {
+        ytPlayerRef.current.setVolume(isMuted ? 0 : volume * 100);
+      } catch (e) {}
     }
   }, [volume, isMuted]);
 
-  const handleTimeUpdate = () => {
-    if (!audioRef.current) return;
-    const t = audioRef.current.currentTime;
-    const d = audioRef.current.duration;
-
-    setCurrentTime(t);
-    if (onTimeUpdate) {
-      onTimeUpdate(t);
-    }
-    if (d && !isNaN(d)) {
-      setDuration(d);
-    }
-
-    // Trigger smart recommendation preload if nearing end of track (within 15s)
-    if (d > 0 && d - t <= 15 && isAutoplay && !hasRequestedMoreRef.current) {
-      hasRequestedMoreRef.current = true;
-      if (onNeedMoreTracks) {
-        onNeedMoreTracks();
-      }
-    }
-  };
-
   const handleTrackEnded = () => {
     if (isLooping) {
-      if (audioRef.current) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.play();
+      if (ytPlayerRef.current && ytPlayerRef.current.seekTo) {
+        ytPlayerRef.current.seekTo(0, true);
+        ytPlayerRef.current.playVideo();
       }
     } else if (onNext) {
       onNext();
@@ -134,8 +239,8 @@ export default function AudioPlayer({
   const handleSeek = (e) => {
     const seekTo = parseFloat(e.target.value);
     setCurrentTime(seekTo);
-    if (audioRef.current) {
-      audioRef.current.currentTime = seekTo;
+    if (ytPlayerRef.current && isYtReadyRef.current && ytPlayerRef.current.seekTo) {
+      ytPlayerRef.current.seekTo(seekTo, true);
     }
   };
 
@@ -144,8 +249,10 @@ export default function AudioPlayer({
   };
 
   const skipTime = (seconds) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = Math.max(0, Math.min(duration, audioRef.current.currentTime + seconds));
+    const nextTime = Math.max(0, Math.min(duration, currentTime + seconds));
+    setCurrentTime(nextTime);
+    if (ytPlayerRef.current && isYtReadyRef.current && ytPlayerRef.current.seekTo) {
+      ytPlayerRef.current.seekTo(nextTime, true);
     }
   };
 
@@ -161,20 +268,10 @@ export default function AudioPlayer({
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 glass-panel border-t border-brand-500/30 bg-dark-bg/95 backdrop-blur-2xl shadow-[0_-10px_35px_rgba(0,0,0,0.5)]">
       
-      {/* Native audio element */}
-      <audio
-        ref={audioRef}
-        crossOrigin="anonymous"
-        preload="metadata"
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={() => {
-          if (audioRef.current && audioRef.current.duration) {
-            setDuration(audioRef.current.duration);
-          }
-          setIsLoadingAudio(false);
-        }}
-        onEnded={handleTrackEnded}
-        onError={() => setIsLoadingAudio(false)}
+      {/* Hidden YouTube audio player container */}
+      <div 
+        id="soundpulse-yt-player" 
+        className="pointer-events-none opacity-0 fixed -top-[9999px] -left-[9999px] w-1 h-1" 
       />
 
       {/* Top thin progress scrubber bar */}
