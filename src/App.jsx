@@ -216,10 +216,21 @@ export default function App() {
     setDownloadBitrate(bitrate);
   };
 
-  // Search and play helper for other tabs
-  const handleSearchAndPlay = (query) => {
-    handleSearch(query);
-    setActiveTab('search');
+  // Search and play helper for other tabs (keeps user on current page and plays track immediately)
+  const handleSearchAndPlay = async (query) => {
+    try {
+      setIsLoading(true);
+      const response = await axios.get(`/api/search?q=${encodeURIComponent(query)}&limit=16`);
+      if (response.data && response.data.tracks && response.data.tracks.length > 0) {
+        const foundTracks = response.data.tracks;
+        setTracks(foundTracks);
+        handlePlayTrack(foundTracks[0], foundTracks, 0);
+      }
+    } catch (err) {
+      console.warn('Search & play error:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -404,7 +415,6 @@ export default function App() {
               onDownloadTrack={handleStartDownload}
               onSwitchQuery={(query) => {
                 handleSearch(query);
-                setActiveTab('search');
               }}
             />
 

@@ -17,6 +17,22 @@ import {
 } from 'lucide-react';
 import { getApiUrl } from '../api.js';
 
+function getCleanTrackId(track) {
+  if (!track) return '';
+  const idStr = typeof track === 'string' ? track : String(track.id || track.videoId || track.url || '');
+  if (!idStr) return '';
+  if (idStr.includes('v=')) {
+    const afterV = idStr.split('v=')[1];
+    return afterV ? afterV.split('&')[0] : '';
+  }
+  if (idStr.includes('youtu.be/')) {
+    const afterSlash = idStr.split('youtu.be/')[1];
+    return afterSlash ? afterSlash.split('?')[0] : '';
+  }
+  const parts = idStr.split('/');
+  return parts[parts.length - 1] || idStr;
+}
+
 export default function AudioPlayer({ 
   currentTrack, 
   isPlaying, 
@@ -80,6 +96,13 @@ export default function AudioPlayer({
                 isYtReadyRef.current = true;
                 if (ytPlayerRef.current?.setVolume) {
                   ytPlayerRef.current.setVolume(isMuted ? 0 : volume * 100);
+                }
+                if (currentTrack) {
+                  const cleanId = getCleanTrackId(currentTrack);
+                  if (cleanId && ytPlayerRef.current?.loadVideoById) {
+                    ytPlayerRef.current.loadVideoById({ videoId: cleanId, startSeconds: 0 });
+                    if (isPlaying) ytPlayerRef.current.playVideo?.();
+                  }
                 }
               },
               onStateChange: (event) => {
@@ -175,7 +198,7 @@ export default function AudioPlayer({
     setIsLoadingAudio(true);
     setCurrentTime(0);
 
-    const cleanId = currentTrack.id ? currentTrack.id.split('v=')[-1].split('/')[-1] : '';
+    const cleanId = getCleanTrackId(currentTrack);
 
     if (cleanId && ytPlayerRef.current && isYtReadyRef.current && ytPlayerRef.current.loadVideoById) {
       try {
@@ -192,9 +215,11 @@ export default function AudioPlayer({
       // If player not ready yet, retry in 300ms
       const retryTimer = setTimeout(() => {
         if (ytPlayerRef.current && ytPlayerRef.current.loadVideoById) {
-          ytPlayerRef.current.loadVideoById({ videoId: cleanId, startSeconds: 0 });
-          ytPlayerRef.current.setVolume(isMuted ? 0 : volume * 100);
-          setIsPlaying(true);
+          try {
+            ytPlayerRef.current.loadVideoById({ videoId: cleanId, startSeconds: 0 });
+            ytPlayerRef.current.setVolume(isMuted ? 0 : volume * 100);
+            setIsPlaying(true);
+          } catch (e) {}
         }
       }, 400);
       return () => clearTimeout(retryTimer);
