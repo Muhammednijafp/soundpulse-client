@@ -438,7 +438,8 @@ export default function SoundStudioLab({ currentTrack, isPlaying, onPlayTrack, o
                         step="1"
                         value={eqValues[band.index]}
                         onChange={(e) => handleSliderChange(band.index, e.target.value)}
-                        className="h-28 w-2 bg-dark-card rounded-lg appearance-none cursor-pointer accent-brand-neon [writing-mode:bt-lr] [-webkit-appearance:slider-vertical]"
+                        style={{ writingMode: 'vertical-lr', direction: 'rtl' }}
+                        className="h-28 w-2.5 bg-dark-card rounded-lg cursor-pointer accent-brand-neon"
                       />
 
                       <div className="text-center">
