@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, X, Flame, Sparkles, Mic, Music2, ArrowRight } from 'lucide-react';
+import { Search, X, Flame, Sparkles, Mic, Music2, ArrowRight, Activity, Zap, Disc3 } from 'lucide-react';
 
 const POPULAR_TAGS = [
   { label: '🎤 MHR Malayalam Rap', query: 'mhr malayalam rapper songs' },
@@ -12,7 +12,7 @@ const POPULAR_TAGS = [
   { label: '🎧 Lofi & Chillhop', query: 'lofi chill beats songs' }
 ];
 
-export default function SearchSection({ onSearch, currentQuery, isLoading }) {
+export default function SearchSection({ onSearch, currentQuery, isLoading, onOpenStudio, onOpenMetrics }) {
   const [searchInput, setSearchInput] = useState(currentQuery || '');
 
   const handleSubmit = (e) => {
@@ -32,16 +32,16 @@ export default function SearchSection({ onSearch, currentQuery, isLoading }) {
   };
 
   return (
-    <section className="relative pt-6 pb-10 text-center">
+    <section className="relative pt-6 pb-8 text-center">
       {/* Background glow orb */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-brand-500/10 rounded-full blur-3xl pointer-events-none -z-10" />
 
       <div className="max-w-4xl mx-auto px-4">
         
         {/* Title */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-300 text-xs font-semibold uppercase tracking-wider mb-4 animate-pulse-slow">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-300 text-xs font-semibold uppercase tracking-wider mb-4">
           <Sparkles className="w-3.5 h-3.5 text-brand-neon" />
-          <span>Unlimited Free High-Quality MP3 Downloader</span>
+          <span>Unlimited Free High-Quality MP3 Downloader & Player</span>
         </div>
 
         <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white mb-3">
@@ -114,4 +114,3 @@ export default function SearchSection({ onSearch, currentQuery, isLoading }) {
     </section>
   );
 }
-

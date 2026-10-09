@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Play, 
   Pause, 
@@ -8,7 +8,8 @@ import {
   Check, 
   Share2, 
   Music, 
-  ChevronDown 
+  ChevronDown,
+  Sparkles
 } from 'lucide-react';
 
 export default function SongCard({ 
@@ -20,6 +21,31 @@ export default function SongCard({
 }) {
   const [showQualityMenu, setShowQualityMenu] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const [isHovered, setIsHovered] = useState(false);
+  const cardRef = useRef(null);
+
+  const handleMouseMove = (e) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    
+    const rotateX = ((y - centerY) / centerY) * -6; // max 6 deg
+    const rotateY = ((x - centerX) / centerX) * 6;
+    setTilt({ x: rotateX, y: rotateY });
+  };
+
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+    setTilt({ x: 0, y: 0 });
+  };
 
   const handleCopy = (e) => {
     e.stopPropagation();
@@ -37,9 +63,23 @@ export default function SongCard({
   };
 
   return (
-    <div className={`group glass-card rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden transition-all duration-300 ${
-      isCurrent ? 'ring-2 ring-brand-500 bg-dark-card/90 shadow-xl shadow-brand-500/10' : ''
-    }`}>
+    <div 
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      style={{
+        transform: isHovered 
+          ? `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) translateY(-4px)`
+          : 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0px)',
+        transition: isHovered ? 'transform 0.1s ease-out' : 'transform 0.5s ease-out, border-color 0.3s ease, box-shadow 0.3s ease'
+      }}
+      className={`group glass-card rounded-2xl p-4 flex flex-col justify-between relative overflow-hidden will-change-transform ${
+        isCurrent 
+          ? 'ring-2 ring-brand-neon bg-dark-card/95 shadow-2xl shadow-brand-500/20' 
+          : 'hover:border-brand-500/50 hover:shadow-xl hover:shadow-brand-500/10'
+      }`}
+    >
       
       {/* Top Thumbnail Section */}
       <div className="relative rounded-xl overflow-hidden aspect-video mb-3.5 bg-dark-surface">
@@ -54,6 +94,11 @@ export default function SongCard({
         <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-dark-bg/85 backdrop-blur-md text-slate-200 text-[11px] font-mono font-semibold flex items-center gap-1">
           <Clock className="w-3 h-3 text-brand-400" />
           <span>{track.durationFormatted}</span>
+        </div>
+
+        {/* 320k Lossless Stamp */}
+        <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-dark-bg/80 backdrop-blur-md text-brand-300 border border-brand-500/30 text-[9px] font-bold uppercase tracking-wider">
+          320k MP3
         </div>
 
         {/* Play Overlay Button */}
@@ -74,11 +119,11 @@ export default function SongCard({
 
         {/* Active Audio Wave Indicator */}
         {isCurrent && isPlaying && (
-          <div className="absolute top-2 left-2 px-2.5 py-1 rounded-full bg-dark-bg/90 backdrop-blur-md border border-brand-500/40 flex items-center gap-1">
+          <div className="absolute top-2 left-2 px-2.5 py-1 rounded-full bg-dark-bg/90 backdrop-blur-md border border-brand-500/40 flex items-center gap-1 shadow-lg shadow-brand-500/20">
             <span className="w-1 h-3 bg-brand-neon rounded-full animate-wave-1" />
             <span className="w-1 h-4 bg-brand-neon rounded-full animate-wave-2" />
             <span className="w-1 h-2.5 bg-brand-neon rounded-full animate-wave-3" />
-            <span className="text-[10px] font-bold text-brand-300 ml-1">PLAYING</span>
+            <span className="text-[10px] font-bold text-brand-300 ml-1">LIVE</span>
           </div>
         )}
       </div>
@@ -100,7 +145,7 @@ export default function SongCard({
             </span>
             {track.viewsFormatted && (
               <span className="flex items-center gap-1 text-[11px] text-slate-400 shrink-0">
-                <Eye className="w-3 h-3" />
+                <Eye className="w-3 h-3 text-slate-500" />
                 {track.viewsFormatted}
               </span>
             )}
@@ -116,7 +161,7 @@ export default function SongCard({
             onClick={() => onPlay(track)}
             className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
               isCurrent
-                ? 'bg-brand-500/20 text-brand-300 border border-brand-500/40'
+                ? 'bg-brand-500/20 text-brand-300 border border-brand-500/40 shadow-sm'
                 : 'bg-dark-surface hover:bg-dark-hover text-slate-200 border border-dark-border'
             }`}
           >
@@ -206,4 +251,3 @@ export default function SongCard({
     </div>
   );
 }
-
