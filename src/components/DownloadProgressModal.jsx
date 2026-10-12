@@ -31,11 +31,15 @@ export default function DownloadProgressModal({
 
     const cleanId = getCleanId(downloadingTrack);
     const targetBitrate = bitrate || '320k';
+    const trackTitle = downloadingTrack.title || 'song';
+    const trackArtist = downloadingTrack.artist || 'audio';
+
+    const downloadUrl = getApiUrl(
+      `/api/download?id=${encodeURIComponent(cleanId)}&bitrate=${encodeURIComponent(targetBitrate)}&title=${encodeURIComponent(trackTitle)}&artist=${encodeURIComponent(trackArtist)}`
+    );
 
     try {
       setStep(2);
-      const downloadUrl = getApiUrl(`/api/download?id=${encodeURIComponent(cleanId)}&bitrate=${encodeURIComponent(targetBitrate)}`);
-
       const response = await fetch(downloadUrl);
 
       if (!response.ok) {
@@ -53,7 +57,7 @@ export default function DownloadProgressModal({
       const blob = await response.blob();
       const objectUrl = window.URL.createObjectURL(blob);
 
-      const filename = `${(downloadingTrack.title || 'song').replace(/[\\/:*?"<>|]/g, '')} - ${targetBitrate}.mp3`;
+      const filename = `${trackTitle.replace(/[\\/:*?"<>|]/g, '')} - ${targetBitrate}.mp3`;
 
       const link = document.createElement('a');
       link.href = objectUrl;
@@ -76,7 +80,25 @@ export default function DownloadProgressModal({
       } catch (err) {}
 
     } catch (err) {
-      console.error('Download error:', err);
+      console.warn('Fetch download hit error, triggering browser direct download:', err);
+      // Fallback Method: Trigger native browser download directly if fetch() timed out or hit NetworkError
+      try {
+        const filename = `${trackTitle.replace(/[\\/:*?"<>|]/g, '')} - ${targetBitrate}.mp3`;
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.setAttribute('download', filename);
+        link.setAttribute('target', '_blank');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        setStep(3);
+        setIsCompleted(true);
+        return;
+      } catch (fallbackErr) {
+        console.error('Fallback direct download failed:', fallbackErr);
+      }
+
       setErrorMessage(err.message || 'Unable to download track at this time.');
     }
   };
