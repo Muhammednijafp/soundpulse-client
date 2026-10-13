@@ -82,7 +82,11 @@ export default function DownloadProgressModal({
 
     } catch (err) {
       console.error('Download error:', err);
-      setErrorMessage(err.message || 'Unable to download track at this time.');
+      let msg = err.message || 'Unable to download track at this time.';
+      if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+        msg = 'Cloud server is completing extraction or needs cookies. Click "Direct Browser Save" below to save directly, or configure YOUTUBE_COOKIES in Render.';
+      }
+      setErrorMessage(msg);
     }
   };
 
@@ -140,7 +144,7 @@ export default function DownloadProgressModal({
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>Download Notice</span>
             </div>
-            <p className="text-xs text-slate-300 leading-relaxed mb-3">
+            <p className="text-xs text-slate-300 leading-relaxed mb-4">
               {errorMessage.includes("bot") || errorMessage.includes("Sign in") ? (
                 <span>
                   YouTube requires authentication on cloud servers. Set <code className="bg-dark-bg px-1.5 py-0.5 rounded text-brand-300 font-mono text-[11px]">YOUTUBE_COOKIES</code> in your <strong>Render Dashboard</strong> environment variables to enable unlimited 320kbps downloads.
@@ -150,24 +154,24 @@ export default function DownloadProgressModal({
               )}
             </p>
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={startDownload}
-                className="px-3 py-1.5 rounded-xl bg-brand-500/20 hover:bg-brand-500/30 border border-brand-500/40 text-brand-300 text-xs font-bold flex items-center gap-1.5 transition-all"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Retry Download</span>
-              </button>
               {downloadUrl && (
                 <a
                   href={downloadUrl}
                   download={cleanFilename}
-                  className="px-3 py-1.5 rounded-xl bg-dark-card hover:bg-dark-hover border border-dark-border text-slate-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-all"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-brand-500 hover:from-emerald-400 hover:to-brand-400 text-dark-bg font-extrabold text-xs shadow-lg shadow-brand-500/20 flex items-center gap-1.5 transition-all"
                 >
-                  <FolderDown className="w-3.5 h-3.5" />
+                  <FolderDown className="w-4 h-4" />
                   <span>Direct Browser Save</span>
                 </a>
               )}
+              <button
+                type="button"
+                onClick={startDownload}
+                className="px-3 py-2 rounded-xl bg-dark-card hover:bg-dark-hover border border-dark-border text-slate-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-all"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Retry Download</span>
+              </button>
             </div>
           </div>
         ) : (
