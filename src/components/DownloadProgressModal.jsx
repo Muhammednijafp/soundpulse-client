@@ -22,21 +22,22 @@ export default function DownloadProgressModal({
   const [isCompleted, setIsCompleted] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
 
+  const cleanId = getCleanId(downloadingTrack);
+  const targetBitrate = bitrate || '320k';
+  const trackTitle = downloadingTrack?.title || 'song';
+  const trackArtist = downloadingTrack?.artist || 'audio';
+  const cleanFilename = `${trackTitle.replace(/[\\/:*?"<>|]/g, '')} - ${targetBitrate}.mp3`;
+
+  const downloadUrl = downloadingTrack ? getApiUrl(
+    `/api/download?id=${encodeURIComponent(cleanId)}&bitrate=${encodeURIComponent(targetBitrate)}&title=${encodeURIComponent(trackTitle)}&artist=${encodeURIComponent(trackArtist)}`
+  ) : '';
+
   const startDownload = async () => {
     if (!downloadingTrack) return;
 
     setStep(1);
     setIsCompleted(false);
     setErrorMessage(null);
-
-    const cleanId = getCleanId(downloadingTrack);
-    const targetBitrate = bitrate || '320k';
-    const trackTitle = downloadingTrack.title || 'song';
-    const trackArtist = downloadingTrack.artist || 'audio';
-
-    const downloadUrl = getApiUrl(
-      `/api/download?id=${encodeURIComponent(cleanId)}&bitrate=${encodeURIComponent(targetBitrate)}&title=${encodeURIComponent(trackTitle)}&artist=${encodeURIComponent(trackArtist)}`
-    );
 
     try {
       setStep(2);
@@ -80,25 +81,7 @@ export default function DownloadProgressModal({
       } catch (err) {}
 
     } catch (err) {
-      console.warn('Fetch download hit error, triggering browser direct download:', err);
-      // Fallback Method: Trigger native browser download directly if fetch() timed out or hit NetworkError
-      try {
-        const filename = `${trackTitle.replace(/[\\/:*?"<>|]/g, '')} - ${targetBitrate}.mp3`;
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.setAttribute('download', filename);
-        link.setAttribute('target', '_blank');
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        setStep(3);
-        setIsCompleted(true);
-        return;
-      } catch (fallbackErr) {
-        console.error('Fallback direct download failed:', fallbackErr);
-      }
-
+      console.error('Download error:', err);
       setErrorMessage(err.message || 'Unable to download track at this time.');
     }
   };
@@ -166,7 +149,7 @@ export default function DownloadProgressModal({
                 errorMessage
               )}
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={startDownload}
@@ -175,6 +158,16 @@ export default function DownloadProgressModal({
                 <RefreshCw className="w-3.5 h-3.5" />
                 <span>Retry Download</span>
               </button>
+              {downloadUrl && (
+                <a
+                  href={downloadUrl}
+                  download={cleanFilename}
+                  className="px-3 py-1.5 rounded-xl bg-dark-card hover:bg-dark-hover border border-dark-border text-slate-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-all"
+                >
+                  <FolderDown className="w-3.5 h-3.5" />
+                  <span>Direct Browser Save</span>
+                </a>
+              )}
             </div>
           </div>
         ) : (
